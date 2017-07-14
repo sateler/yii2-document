@@ -1,6 +1,6 @@
-A generic DB document store
+Yii2 plugin for a document model
 ===========================
-A generic DB document store
+
 
 Installation
 ------------
@@ -10,13 +10,13 @@ The preferred way to install this extension is through [composer](http://getcomp
 Either run
 
 ```
-php composer.phar require --prefer-dist sateler/yii2-document "*"
+php composer.phar require --prefer-dist sateler/yii2-document "^1.0"
 ```
 
 or add
 
 ```
-"sateler/yii2-document": "*"
+"sateler/yii2-document": "^1.0"
 ```
 
 to the require section of your `composer.json` file.
