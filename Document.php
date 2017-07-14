@@ -80,6 +80,13 @@ class Document extends ActiveRecord
         return true;
     }
 
+    /** Creates a Document model from an UploadedFile
+     *
+     * The model is not yet saved after creation
+     *
+     * @param UploadedFile $file The uploaded document
+     * @return Document
+     */
     public static function createFromUploadedFile(UploadedFile $file) {
         $doc = new Document();
         $doc->name = $file->name;
@@ -88,6 +95,12 @@ class Document extends ActiveRecord
         return $doc;
     }
     
+    /** Updates the contents of the document with the passed UploadedFile
+     *
+     * The model is not yet saved after update
+     *
+     * @param UploadedFile $file
+     */
     public function updateFromUploadedFile(UploadedFile $file) {
         $this->name = $file->name;
         $this->mime_type = $file->type;
