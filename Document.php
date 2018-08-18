@@ -23,7 +23,7 @@ use yii\helpers\ArrayHelper;
  */
 class Document extends ActiveRecord
 {
-    const TAG = "sateler.Document";
+    const LOG_TAG = "sateler.Document";
 
     const NO_BUCKET_LOCAL_SQL_STORAGE = "local-sql";
 
@@ -155,6 +155,33 @@ class Document extends ActiveRecord
         return true;
     }
 
+    private $deletedId = null;
+    /**
+     * @inheritdoc
+     */
+    public function beforeDelete()
+    {
+        $this->deletedId = $this->id;
+        return parent::beforeDelete();
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function afterDelete()
+    {
+        parent::afterDelete();
+
+        // Delete from external storage if needed
+        $bucket = $this->getBucket();
+        if($bucket && $this->deletedId) {
+            $ret = $bucket->deleteFile($this->deletedId);
+            if(!$ret) {
+                Yii::error("Unable to delete file from external Storage. File was: {$this->deletedId}", self::LOG_TAG);
+            }
+        }
+    }
+
     /**
      * Gets the external bucket instance or null
      *
@@ -178,7 +205,7 @@ class Document extends ActiveRecord
         do {
             $id = Uuid::uuid4()->toString();
             $this->id = $id;
-            Yii::info("Generating document id: ".$this->id, self::TAG);
+            Yii::info("Generating document id: ".$this->id, self::LOG_TAG);
         }while (static::findOne($this->id));
     }
 
