@@ -28,6 +28,8 @@ class Document extends ActiveRecord
 
     const NO_BUCKET_LOCAL_SQL_STORAGE = "local-sql";
 
+    const SCENARIO_CREATE = 'scenario-create';
+
     protected $external_contents = null;
     
     /**
@@ -53,6 +55,7 @@ class Document extends ActiveRecord
     {
         return [
             [['name', 'mime_type', 'external_bucket_name'], 'required'],
+            [['contents'], 'required', 'on' => self::SCENARIO_CREATE],
             [['contents'], 'safe'],
             [['id'], 'string', 'max' => 36],
             [['name', 'mime_type', 'external_bucket_name'], 'string', 'max' => 255],
@@ -137,6 +140,17 @@ class Document extends ActiveRecord
     /**
      * @inheritdoc
      */
+    public function beforeValidate()
+    {
+        if($this->isNewRecord) {
+            $this->scenario = self::SCENARIO_CREATE;
+        }
+        return parent::beforeValidate();
+    }
+
+    /**
+     * @inheritdoc
+     */
     public function beforeSave($insert)
     {
         if(!parent::beforeSave($insert)) {
@@ -147,9 +161,10 @@ class Document extends ActiveRecord
             $this->setNewUniqueId();
         }
 
-        // Save in external storage if needed
+        // Save in external storage if external storage selected and file provided.
+        // A file may not be provided when updating just metadata (contents is required on create scenario only).
         $bucket = $this->getBucket();
-        if($bucket) {
+        if($bucket && $this->external_contents) {
             return $bucket->saveFileContent($this->id, $this->external_contents);
         }
 
