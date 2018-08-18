@@ -24,6 +24,7 @@ use yii\helpers\ArrayHelper;
 class Document extends ActiveRecord
 {
     const LOG_TAG = "sateler.Document";
+    const PARAM_BUCKET_NAME = 'sateler.yii2-document.default_external_bucket_name';
 
     const NO_BUCKET_LOCAL_SQL_STORAGE = "local-sql";
 
@@ -88,7 +89,7 @@ class Document extends ActiveRecord
     {
         // Set default storage from params
         if($this->isNewRecord && !$this->external_bucket_name) {
-            $this->external_bucket_name = ArrayHelper::getValue(Yii::$app->params, 'yii2-document.default_external_bucket_name', self::NO_BUCKET_LOCAL_SQL_STORAGE);
+            $this->external_bucket_name = ArrayHelper::getValue(Yii::$app->params, self::PARAM_BUCKET_NAME, self::NO_BUCKET_LOCAL_SQL_STORAGE);
         }
         parent::init();
     }
