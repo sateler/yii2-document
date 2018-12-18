@@ -22,7 +22,7 @@ class m180816_185140_add_document_external_storage extends Migration
      */
     public function safeDown()
     {
-        $ret = Yii::$app->db->createCommand("SELECT COUNT(*) FROM document WHERE contents is NULL")->queryScalar();
+        $ret = Yii::$app->db->createCommand("SELECT COUNT(*) FROM document WHERE local_contents is NULL")->queryScalar();
         if($ret > 0) {
             echo "m180816_185140_document_contents_is_nullable cannot be reverted when `document.contents` column contain NULL items.\n";
             return false;
