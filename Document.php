@@ -142,7 +142,7 @@ class Document extends ActiveRecord
      */
     public function beforeValidate()
     {
-        if($this->isNewRecord) {
+        if($this->isNewRecord && $this->scenario == self::SCENARIO_DEFAULT) {
             $this->scenario = self::SCENARIO_CREATE;
         }
         return parent::beforeValidate();
