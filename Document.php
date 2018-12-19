@@ -15,20 +15,41 @@ use yii\helpers\ArrayHelper;
  * @property string $id
  * @property string $name
  * @property string $mime_type
- * @property string $external_bucket_name
+ * @property string $filesystem_id
  * @property resource $contents
  * @property resource $local_contents
  * @property integer $created_at
  * @property integer $updated_at
+ * @property ExternalFilesystem $externalFilesystem
  */
 class Document extends ActiveRecord
 {
     const LOG_TAG = "sateler.Document";
-    const PARAM_BUCKET_NAME = 'sateler.yii2-document.default_external_bucket_name';
-
-    const NO_BUCKET_LOCAL_SQL_STORAGE = "local-sql";
 
     const SCENARIO_CREATE = 'scenario-create';
+
+    const LOCAL_SQL_STORAGE_KEY = 'local-sql';
+
+    /**
+     * Wheter to use local sql storage ot external one.
+     *
+     * @var string
+     */
+    public $useExternalStorage = true;
+
+    /**
+     * Yii2 component name for the default filesystem
+     *
+     * @var string
+     */
+    public $defaultFilesystemId = 'external_fs';
+
+    /**
+     * The External Filesystem Instance
+     *
+     * @var ExternalFilesystem
+     */
+    private $filesystem = null;
 
     protected $external_contents = null;
     
@@ -54,11 +75,11 @@ class Document extends ActiveRecord
     public function rules()
     {
         return [
-            [['name', 'mime_type', 'external_bucket_name'], 'required'],
+            [['name', 'mime_type', 'filesystem_id'], 'required'],
             [['contents'], 'required', 'on' => self::SCENARIO_CREATE],
             [['contents'], 'safe'],
             [['id'], 'string', 'max' => 36],
-            [['name', 'mime_type', 'external_bucket_name'], 'string', 'max' => 255],
+            [['name', 'mime_type', 'filesystem_id'], 'string', 'max' => 255],
         ];
     }
 
@@ -70,7 +91,7 @@ class Document extends ActiveRecord
         return [
             'name' => 'Nombre',
             'mime_type' => 'Tipo',
-            'external_bucket_name' => 'External Storage Bucket Name',
+            'filesystem_id' => 'Filesystem Id',
             'contents' => 'Contents',
             'created_at' => 'Subido En',
             'updated_at' => 'Actualizado En',
@@ -91,10 +112,26 @@ class Document extends ActiveRecord
     public function init()
     {
         // Set default storage from params
-        if($this->isNewRecord && !$this->external_bucket_name) {
-            $this->external_bucket_name = ArrayHelper::getValue(Yii::$app->params, self::PARAM_BUCKET_NAME, self::NO_BUCKET_LOCAL_SQL_STORAGE);
+        if($this->isNewRecord && $this->useExternalStorage && !$this->filesystem_id) {
+            $this->filesystem_id = $this->defaultFilesystemId;
+        }
+        elseif($this->isNewRecord && !$this->useExternalStorage) { 
+            $this->filesystem_id = self::LOCAL_SQL_STORAGE_KEY;
         }
         parent::init();
+    }
+
+    /**
+     * Gets the external filesystem instance
+     *
+     * @return ExternalFilesystem
+     */
+    public function getExternalFilesystem() : ExternalFilesystem
+    {
+        if(!$this->filesystem) {
+            $this->filesystem = new ExternalFilesystem(['filesystemId' => $this->filesystem_id]);
+        }
+        return $this->filesystem;
     }
 
     /**
@@ -104,10 +141,9 @@ class Document extends ActiveRecord
      */
     public function getContents($forceFetch = false)
     {
-        $bucket = $this->getBucket();
-        if ($bucket) {
+        if ($this->useExternalStorage) {
             if (is_null($this->external_contents) || $forceFetch) {
-                $this->external_contents = $bucket->getFileContent($this->id);
+                $this->external_contents = $this->externalFilesystem->read($this->id);
             }
             return $this->external_contents;
         }
@@ -128,8 +164,7 @@ class Document extends ActiveRecord
      */
     public function setContents($contents)
     {
-        $bucket = $this->getBucket();
-        if ($bucket) {
+        if ($this->useExternalStorage) {
             $this->external_contents = $contents;
         }
         else {
@@ -163,9 +198,8 @@ class Document extends ActiveRecord
 
         // Save in external storage if external storage selected and file provided.
         // A file may not be provided when updating just metadata (contents is required on create scenario only).
-        $bucket = $this->getBucket();
-        if($bucket && $this->external_contents) {
-            return $bucket->saveFileContent($this->id, $this->external_contents);
+        if($this->useExternalStorage && $this->external_contents) {
+            return $this->externalFilesystem->write($this->id, $this->external_contents);
         }
 
         return true;
@@ -189,26 +223,12 @@ class Document extends ActiveRecord
         parent::afterDelete();
 
         // Delete from external storage if needed
-        $bucket = $this->getBucket();
-        if($bucket && $this->deletedId) {
-            $ret = $bucket->deleteFile($this->deletedId);
+        if($this->useExternalStorage && $this->deletedId) {
+            $ret = $this->externalFilesystem->delete($this->deletedId);
             if(!$ret) {
                 Yii::error("Unable to delete file from external Storage. File was: {$this->deletedId}", self::LOG_TAG);
             }
         }
-    }
-
-    /**
-     * Gets the external bucket instance or null
-     *
-     * @return \yii2tech\filestorage\BucketInterface
-     */
-    protected function getBucket()
-    {
-        if($this->external_bucket_name == self::NO_BUCKET_LOCAL_SQL_STORAGE) {
-            return null;
-        }
-        return Yii::$app->fileStorage->getBucket($this->external_bucket_name);
     }
 
     /**
