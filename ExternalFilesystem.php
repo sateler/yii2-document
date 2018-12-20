@@ -27,7 +27,7 @@ class ExternalFilesystem extends BaseObject
     public function init()
     {
         if(!$this->filesystemId || !isset(Yii::$app->{$this->filesystemId})) {
-            throw new InvalidConfigException("A valid filesystem id must be provided.");
+            throw new InvalidConfigException("A valid filesystem id (yii2 component) must be provided.");
         }
         $this->flysystem = Yii::$app->{$this->filesystemId};
 

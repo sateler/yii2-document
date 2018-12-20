@@ -31,13 +31,21 @@ class Document extends ActiveRecord
     const SCENARIO_CREATE = 'scenario-create';
 
     const LOCAL_SQL_STORAGE_KEY = 'local-sql';
+    const DEFAULT_FILESYSTEM_ID_PARAM_NAME = 'sateler.document.default_filesystem_id';
 
     /**
-     * Yii2 component name for the default filesystem
+     * Default filesystem to use un case no param name or value is given
      *
      * @var string
      */
-    public $defaultFilesystemId = 'external_fs';
+    public $defaultFilesystemId = self::LOCAL_SQL_STORAGE_KEY;
+
+    /**
+     * Param name to get the default filesystem id
+     *
+     * @var string
+     */
+    public $defaultFilesystemIdParam = self::DEFAULT_FILESYSTEM_ID_PARAM_NAME;
 
     /**
      * The External Filesystem Instance
@@ -95,6 +103,7 @@ class Document extends ActiveRecord
 
     /**
      * @inheritdoc
+     * @return DocumentQuery the newly created [[DocumentQuery]] instance.
      */
     public static function find()
     {
@@ -104,11 +113,11 @@ class Document extends ActiveRecord
     /**
      * @inheritdoc
      */
-    public function init()
+    public function __construct($config = [])
     {
         // Set default filsystem storage
-        $this->filesystem_id = $this->defaultFilesystemId;
-        parent::init();
+        $this->filesystem_id = ArrayHelper::getValue(Yii::$app->params, $this->defaultFilesystemIdParam, $this->defaultFilesystemId);
+        parent::__construct($config);
     }
 
     /**
