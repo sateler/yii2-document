@@ -9,6 +9,7 @@ use Ramsey\Uuid\Uuid;
 use \yii\db\ActiveRecord;
 use yii\helpers\ArrayHelper;
 use yii\base\InvalidCallException;
+use League\Flysystem\Filesystem;
 
 /**
  * This is the model class for table "document".
@@ -21,7 +22,7 @@ use yii\base\InvalidCallException;
  * @property resource $local_contents
  * @property integer $created_at
  * @property integer $updated_at
- * @property ExternalFilesystem $externalFilesystem
+ * @property Filesystem $filesystem
  * @property boolean $useExternalStorage Wheter this model uses an external storage or not
  */
 class Document extends ActiveRecord
@@ -30,27 +31,10 @@ class Document extends ActiveRecord
 
     const SCENARIO_CREATE = 'scenario-create';
 
-    const LOCAL_SQL_STORAGE_KEY = 'local-sql';
-    const DEFAULT_FILESYSTEM_ID_PARAM_NAME = 'sateler.document.default_filesystem_id';
-
     /**
-     * Default filesystem to use un case no param name or value is given
+     * The Filesystem Instance
      *
-     * @var string
-     */
-    public $defaultFilesystemId = self::LOCAL_SQL_STORAGE_KEY;
-
-    /**
-     * Param name to get the default filesystem id
-     *
-     * @var string
-     */
-    public $defaultFilesystemIdParam = self::DEFAULT_FILESYSTEM_ID_PARAM_NAME;
-
-    /**
-     * The External Filesystem Instance
-     *
-     * @var ExternalFilesystem
+     * @var Filesystem
      */
     private $filesystem = null;
 
@@ -115,8 +99,8 @@ class Document extends ActiveRecord
      */
     public function __construct($config = [])
     {
-        // Set default filsystem storage
-        $this->filesystem_id = ArrayHelper::getValue(Yii::$app->params, $this->defaultFilesystemIdParam, $this->defaultFilesystemId);
+        // Set default filesystem storage
+        $this->filesystem_id = Yii::$app->documentManager->getFilesystemId();
         parent::__construct($config);
     }
 
@@ -128,18 +112,18 @@ class Document extends ActiveRecord
      */
     public function getUseExternalStorage()
     {
-        return $this->filesystem_id != self::LOCAL_SQL_STORAGE_KEY;
+        return $this->filesystem_id != DocumentManager::LOCAL_SQL_STORAGE_KEY;
     }
 
     /**
      * Gets the external filesystem instance
      *
-     * @return ExternalFilesystem
+     * @return Filesystem
      */
-    public function getExternalFilesystem() : ?ExternalFilesystem
+    public function getExternalFilesystem() : ?Filesystem
     {
         if($this->useExternalStorage && !$this->filesystem) {
-            $this->filesystem = new ExternalFilesystem(['filesystemId' => $this->filesystem_id]);
+            $this->filesystem = Yii::$app->documentManager->getFilesystem($this->filesystem_id);
         }
         return $this->filesystem;
     }
