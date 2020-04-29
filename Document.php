@@ -9,7 +9,7 @@ use Ramsey\Uuid\Uuid;
 use \yii\db\ActiveRecord;
 use yii\helpers\ArrayHelper;
 use yii\base\InvalidCallException;
-use League\Flysystem\Filesystem;
+use creocoder\flysystem\Filesystem;
 
 /**
  * This is the model class for table "document".
@@ -121,7 +121,7 @@ class Document extends ActiveRecord
     private function getFilesystem()
     {
         if($this->usesFilesystem() && !$this->filesystem) {
-            $this->filesystem = Yii::$app->documentManager->getFilesystem($this->filesystem_id);
+            $this->filesystem = Yii::$app->documentManager->getOrCreateFilesystem($this->filesystem_id);
         }
         return $this->filesystem;
     }

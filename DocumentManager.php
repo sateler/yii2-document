@@ -6,7 +6,7 @@ use Yii;
 use yii\base\BaseObject;
 use yii\helpers\ArrayHelper;
 use yii\base\InvalidConfigException;
-use League\Flysystem\Filesystem;
+use creocoder\flysystem\Filesystem;
 
 
 class DocumentManager extends BaseObject
@@ -52,31 +52,16 @@ class DocumentManager extends BaseObject
      * @param string $filesystemId
      * @return Filesystem
      */    
-    public function getFilesystem($filesystemId)
+    public function getOrCreateFilesystem($filesystemId)
     {
         if (array_key_exists($filesystemId, $this->filesystems)) {
-            $filesystemParams =  ArrayHelper::getValue($this->filesystems, $filesystemId);
-            return $this->createFilesystem($filesystemParams);
+            $filesystem =  ArrayHelper::getValue($this->filesystems, $filesystemId);
+            if (!$filesystem instanceof Filesystem) {
+                $this->filesystems[$filesystemId] = Yii::createObject($filesystem);
+            }
+            return $this->filesystems[$filesystemId];
         } else {
             throw new InvalidConfigException("The filesystemId specified must be defined in the filesystems array");
         }
-    }
-
-    /**
-     * Creates a filesystem according to the given params
-     *
-     * @param array $params
-     * @return Filesystem
-     */
-    private function createFilesystem($params)
-    {
-        $filesystemClass = ArrayHelper::getValue($params, 'class');
-
-        if (!$filesystemClass) {
-            throw new InvalidConfigException("You must specify a filesystem class!");
-        }
-        unset($params['class']);
-
-        return new $filesystemClass($params);
     }
 }
