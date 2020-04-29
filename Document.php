@@ -22,7 +22,7 @@ use League\Flysystem\Filesystem;
  * @property resource $local_contents
  * @property integer $created_at
  * @property integer $updated_at
- * @property Filesystem $filesystem
+ * @property Filesystem $externalFilesystem
  * @property boolean $useExternalStorage Wheter this model uses an external storage or not
  */
 class Document extends ActiveRecord
@@ -108,7 +108,7 @@ class Document extends ActiveRecord
      * Gets whether this model uses an external storage or not.
      * Calculated using it's filesystem_id
      *
-     * @return void
+     * @return bool
      */
     public function getUseExternalStorage()
     {
