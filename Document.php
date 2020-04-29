@@ -120,7 +120,7 @@ class Document extends ActiveRecord
      *
      * @return Filesystem
      */
-    public function getExternalFilesystem() : ?Filesystem
+    public function getExternalFilesystem()
     {
         if($this->useExternalStorage && !$this->filesystem) {
             $this->filesystem = Yii::$app->documentManager->getFilesystem($this->filesystem_id);

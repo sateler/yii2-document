@@ -55,9 +55,28 @@ class DocumentManager extends BaseObject
     public function getFilesystem($filesystemId)
     {
         if (array_key_exists($filesystemId, $this->filesystems)) {
-            return ArrayHelper::getValue($this->filesystems, $filesystemId);
+            $filesystemParams =  ArrayHelper::getValue($this->filesystems, $filesystemId);
+            return $this->createFilesystem($filesystemParams);
         } else {
             throw new InvalidConfigException("The filesystemId specified must be defined in the filesystems array");
         }
+    }
+
+    /**
+     * Creates a filesystem according to the given params
+     *
+     * @param array $params
+     * @return Filesystem
+     */
+    private function createFilesystem($params)
+    {
+        $filesystemClass = ArrayHelper::getValue($params, 'class');
+
+        if (!$filesystemClass) {
+            throw new InvalidConfigException("You must specify a filesystem class!");
+        }
+        unset($params['class']);
+
+        return new $filesystemClass($params);
     }
 }
