@@ -22,7 +22,6 @@ use League\Flysystem\Filesystem;
  * @property resource $local_contents
  * @property integer $created_at
  * @property integer $updated_at
- * @property Filesystem $getFilesystem()
  */
 class Document extends ActiveRecord
 {
@@ -37,7 +36,7 @@ class Document extends ActiveRecord
      */
     private $filesystem = null;
 
-    protected $external_contents = null;
+    private $filesystem_contents = null;
     
     /**
      * @inheritdoc
@@ -135,10 +134,10 @@ class Document extends ActiveRecord
     public function getContents($forceFetch = false)
     {
         if ($this->usesFilesystem()) {
-            if (is_null($this->external_contents) || $forceFetch) {
-                $this->external_contents = $this->getFilesystem()->read($this->id);
+            if (is_null($this->filesystem_contents) || $forceFetch) {
+                $this->filesystem_contents = $this->getFilesystem()->read($this->id);
             }
-            return $this->external_contents;
+            return $this->filesystem_contents;
         }
         else {
             if (is_null($this->local_contents)) {
@@ -158,7 +157,7 @@ class Document extends ActiveRecord
     public function setContents($contents)
     {
         if ($this->usesFilesystem()) {
-            $this->external_contents = $contents;
+            $this->filesystem_contents = $contents;
             $this->local_contents = null;
         }
         else {
@@ -190,10 +189,10 @@ class Document extends ActiveRecord
             $this->setNewUniqueId();
         }
 
-        // Save in external storage if external storage selected and file provided.
+        // Save in filesystem if defined and file provided.
         // A file may not be provided when updating just metadata (contents is required on create scenario only).
-        if($this->usesFilesystem() && $this->external_contents) {
-            return $this->getFilesystem()->write($this->id, $this->external_contents);
+        if($this->usesFilesystem() && $this->filesystem_contents) {
+            return $this->getFilesystem()->write($this->id, $this->filesystem_contents);
         }
 
         return true;
@@ -216,11 +215,11 @@ class Document extends ActiveRecord
     {
         parent::afterDelete();
 
-        // Delete from external storage if needed
+        // Delete from filesystem if needed
         if($this->usesFilesystem() && $this->deletedId) {
             $ret = $this->getFilesystem()->delete($this->deletedId);
             if(!$ret) {
-                Yii::error("Unable to delete file from external Storage. File was: {$this->deletedId}", self::LOG_TAG);
+                Yii::error("Unable to delete file from filesystem. File was: {$this->deletedId}", self::LOG_TAG);
             }
         }
     }
@@ -297,7 +296,7 @@ class Document extends ActiveRecord
         $this->contents = $contents;
         $ret = $this->save();
 
-        // Delete previous file from external storage if needed
+        // Delete previous file from filesystem if needed
         if($prevUsesFilesystem && !$prevFilesystem->delete($prevId)) {
             Yii::warning("Move: Unable to delete previous file when moving", self::LOG_TAG);
         }
