@@ -11,7 +11,7 @@
         }
     ],
     "require": {
-        "yiisoft/yii2": "^2.0.10",
+        "yiisoft/yii2": "^2.0.16",
         "ramsey/uuid": "^3.5"
     },
     "suggest": {

@@ -8,6 +8,7 @@ use sateler\document\Document;
 use yii\web\Response;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
+use yii\filters\HttpCache;
 
 /**
  * DocumentController implements the CRUD actions for Document model.
@@ -28,6 +29,13 @@ class DocumentController extends Controller
                         'roles' => ['@'],
                     ],
                 ],
+            ],
+            [
+                'class' => HttpCache::className(),
+                'only' => ['view'],
+                'lastModified' => function ($action, $params) {
+                    return Document::find()->where(['id' => Yii::$app->request->get('id')])->max('updated_at');
+                },
             ],
         ];
     }
