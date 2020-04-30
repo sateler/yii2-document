@@ -12,7 +12,10 @@
     ],
     "require": {
         "yiisoft/yii2": "^2.0.10",
-        "ramsey/uuid": "^3.5"
+        "ramsey/uuid": "^4.0"
+    },
+    "suggest": {
+        "creocoder/yii2-flysystem": "^0.9.4"
     },
     "autoload": {
         "psr-4": {
