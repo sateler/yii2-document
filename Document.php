@@ -9,6 +9,7 @@ use Ramsey\Uuid\Uuid;
 use \yii\db\ActiveRecord;
 use yii\helpers\ArrayHelper;
 use yii\base\InvalidCallException;
+use creocoder\flysystem\Filesystem;
 
 /**
  * This is the model class for table "document".
@@ -21,8 +22,6 @@ use yii\base\InvalidCallException;
  * @property resource $local_contents
  * @property integer $created_at
  * @property integer $updated_at
- * @property ExternalFilesystem $externalFilesystem
- * @property boolean $useExternalStorage Wheter this model uses an external storage or not
  */
 class Document extends ActiveRecord
 {
@@ -30,31 +29,14 @@ class Document extends ActiveRecord
 
     const SCENARIO_CREATE = 'scenario-create';
 
-    const LOCAL_SQL_STORAGE_KEY = 'local-sql';
-    const DEFAULT_FILESYSTEM_ID_PARAM_NAME = 'sateler.document.default_filesystem_id';
-
     /**
-     * Default filesystem to use un case no param name or value is given
+     * The Filesystem Instance
      *
-     * @var string
-     */
-    public $defaultFilesystemId = self::LOCAL_SQL_STORAGE_KEY;
-
-    /**
-     * Param name to get the default filesystem id
-     *
-     * @var string
-     */
-    public $defaultFilesystemIdParam = self::DEFAULT_FILESYSTEM_ID_PARAM_NAME;
-
-    /**
-     * The External Filesystem Instance
-     *
-     * @var ExternalFilesystem
+     * @var Filesystem
      */
     private $filesystem = null;
 
-    protected $external_contents = null;
+    private $filesystem_contents = null;
     
     /**
      * @inheritdoc
@@ -115,31 +97,31 @@ class Document extends ActiveRecord
      */
     public function __construct($config = [])
     {
-        // Set default filsystem storage
-        $this->filesystem_id = ArrayHelper::getValue(Yii::$app->params, $this->defaultFilesystemIdParam, $this->defaultFilesystemId);
+        // Set default filesystem storage
+        $this->filesystem_id = Yii::$app->documentManager->getFilesystemId();
         parent::__construct($config);
     }
 
     /**
-     * Gets whether this model uses an external storage or not.
+     * Gets whether this model uses a filesystem or not.
      * Calculated using it's filesystem_id
      *
-     * @return void
+     * @return bool
      */
-    public function getUseExternalStorage()
+    private function usesFilesystem()
     {
-        return $this->filesystem_id != self::LOCAL_SQL_STORAGE_KEY;
+        return $this->filesystem_id != DocumentManager::LOCAL_SQL_STORAGE_KEY;
     }
 
     /**
-     * Gets the external filesystem instance
+     * Gets the filesystem instance
      *
-     * @return ExternalFilesystem
+     * @return Filesystem
      */
-    public function getExternalFilesystem() : ?ExternalFilesystem
+    private function getFilesystem()
     {
-        if($this->useExternalStorage && !$this->filesystem) {
-            $this->filesystem = new ExternalFilesystem(['filesystemId' => $this->filesystem_id]);
+        if($this->usesFilesystem() && !$this->filesystem) {
+            $this->filesystem = Yii::$app->documentManager->getOrCreateFilesystem($this->filesystem_id);
         }
         return $this->filesystem;
     }
@@ -151,11 +133,11 @@ class Document extends ActiveRecord
      */
     public function getContents($forceFetch = false)
     {
-        if ($this->useExternalStorage) {
-            if (is_null($this->external_contents) || $forceFetch) {
-                $this->external_contents = $this->externalFilesystem->read($this->id);
+        if ($this->usesFilesystem()) {
+            if (is_null($this->filesystem_contents) || $forceFetch) {
+                $this->filesystem_contents = $this->getFilesystem()->read($this->id);
             }
-            return $this->external_contents;
+            return $this->filesystem_contents;
         }
         else {
             if (is_null($this->local_contents)) {
@@ -174,8 +156,8 @@ class Document extends ActiveRecord
      */
     public function setContents($contents)
     {
-        if ($this->useExternalStorage) {
-            $this->external_contents = $contents;
+        if ($this->usesFilesystem()) {
+            $this->filesystem_contents = $contents;
             $this->local_contents = null;
         }
         else {
@@ -207,10 +189,10 @@ class Document extends ActiveRecord
             $this->setNewUniqueId();
         }
 
-        // Save in external storage if external storage selected and file provided.
+        // Save in filesystem if defined and file provided.
         // A file may not be provided when updating just metadata (contents is required on create scenario only).
-        if($this->useExternalStorage && $this->external_contents) {
-            return $this->externalFilesystem->write($this->id, $this->external_contents);
+        if($this->usesFilesystem() && $this->filesystem_contents) {
+            return $this->getFilesystem()->write($this->id, $this->filesystem_contents);
         }
 
         return true;
@@ -233,11 +215,11 @@ class Document extends ActiveRecord
     {
         parent::afterDelete();
 
-        // Delete from external storage if needed
-        if($this->useExternalStorage && $this->deletedId) {
-            $ret = $this->externalFilesystem->delete($this->deletedId);
+        // Delete from filesystem if needed
+        if($this->usesFilesystem() && $this->deletedId) {
+            $ret = $this->getFilesystem()->delete($this->deletedId);
             if(!$ret) {
-                Yii::error("Unable to delete file from external Storage. File was: {$this->deletedId}", self::LOG_TAG);
+                Yii::error("Unable to delete file from filesystem. File was: {$this->deletedId}", self::LOG_TAG);
             }
         }
     }
@@ -294,9 +276,9 @@ class Document extends ActiveRecord
     public function moveTo(string $destinationFilesystemId) : bool
     {
         // Get previous storage info and file contents
-        $prevUseExternalStorage = $this->useExternalStorage;
+        $prevUsesFilesystem = $this->usesFilesystem();
         $contents = $this->contents;
-        $prevExternalFilesystem = $this->externalFilesystem;
+        $prevFilesystem = $this->getFilesystem();
         $prevId = $this->id;
 
         // Check if trying to move to the same filestystem it's currently stored in
@@ -314,8 +296,8 @@ class Document extends ActiveRecord
         $this->contents = $contents;
         $ret = $this->save();
 
-        // Delete previous file from external storage if needed
-        if($prevUseExternalStorage && !$prevExternalFilesystem->delete($prevId)) {
+        // Delete previous file from filesystem if needed
+        if($prevUsesFilesystem && !$prevFilesystem->delete($prevId)) {
             Yii::warning("Move: Unable to delete previous file when moving", self::LOG_TAG);
         }
 
