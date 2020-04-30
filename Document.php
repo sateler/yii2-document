@@ -27,8 +27,6 @@ class Document extends ActiveRecord
 {
     const LOG_TAG = "sateler.Document";
 
-    const SCENARIO_CREATE = 'scenario-create';
-
     /**
      * The Filesystem Instance
      *
@@ -61,7 +59,7 @@ class Document extends ActiveRecord
     {
         return [
             [['name', 'mime_type', 'filesystem_id'], 'required'],
-            [['contents'], 'required', 'on' => self::SCENARIO_CREATE],
+            [['contents'], 'required', 'when' => function($model) { return $model->isNewRecord; }],
             [['contents'], 'safe'],
             [['id'], 'string', 'max' => 36],
             [['name', 'mime_type', 'filesystem_id'], 'string', 'max' => 255],
@@ -163,17 +161,6 @@ class Document extends ActiveRecord
         else {
             $this->local_contents = $contents;
         }
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function beforeValidate()
-    {
-        if($this->isNewRecord && $this->scenario == self::SCENARIO_DEFAULT) {
-            $this->scenario = self::SCENARIO_CREATE;
-        }
-        return parent::beforeValidate();
     }
 
     /**
