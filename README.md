@@ -55,7 +55,7 @@ Configuration
 'documentManager' => [
     'class' => \sateler\document\DocumentManager::class,
     // Define default filesystem, of none given sql storage is used
-    'filesystemId' => 'awsS3',
+    'defaultFilesystemId' => 'awsS3',
     'filesystems' => [
         // A flysystem filesystem config
         'awsS3' => [
