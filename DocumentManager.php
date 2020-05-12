@@ -18,7 +18,7 @@ class DocumentManager extends BaseObject
      *
      * @var string
      */
-    public $filesystemId;
+    public $defaultFilesystemId;
 
     /**
      * Available filesystems
@@ -32,17 +32,16 @@ class DocumentManager extends BaseObject
      * If not set, returns the local sql default.
      *
      * @return string
-     */    
-    public function getFilesystemId()
+     */
+    public function getDefaultFilesystemId()
     {
-        if (isset($this->filesystemId)) {
-            if (array_key_exists($this->filesystemId, $this->filesystems)) {
-                return $this->filesystemId;
-            } else {
-                throw new InvalidConfigException("The filesystemId specified must be defined in the filesystems array");
-            }
-        } else {
+        if(empty($this->defaultFilesystemId)) {
             return self::LOCAL_SQL_STORAGE_KEY;
+        }
+        if($this->defaultFilesystemId == self::LOCAL_SQL_STORAGE_KEY || array_key_exists($this->defaultFilesystemId, $this->filesystems)) {
+            return $this->defaultFilesystemId;
+        } else {
+            throw new InvalidConfigException("The defaultFilesystemId specified must be defined in the filesystems array");
         }
     }
 

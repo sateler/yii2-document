@@ -96,7 +96,7 @@ class Document extends ActiveRecord
     public function __construct($config = [])
     {
         // Set default filesystem storage
-        $this->filesystem_id = Yii::$app->documentManager->getFilesystemId();
+        $this->filesystem_id = Yii::$app->documentManager->getDefaultFilesystemId();
         parent::__construct($config);
     }
 
@@ -262,16 +262,16 @@ class Document extends ActiveRecord
      */
     public function moveTo(string $destinationFilesystemId) : bool
     {
+        // Check if trying to move to the same filestystem it's currently stored in
+        if($this->filesystem_id == $destinationFilesystemId) {
+            return true;
+        }
+
         // Get previous storage info and file contents
         $prevUsesFilesystem = $this->usesFilesystem();
         $contents = $this->contents;
         $prevFilesystem = $this->getFilesystem();
         $prevId = $this->id;
-
-        // Check if trying to move to the same filestystem it's currently stored in
-        if($this->filesystem_id == $destinationFilesystemId) {
-            return true;
-        }
 
         // If no contents are found, fail. May be because contents are not available in current model.
         if(!$contents) {
